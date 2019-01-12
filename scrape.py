@@ -1,16 +1,13 @@
 import io
 from html import unescape
-
 import requests
 from genshi.input import HTML
 from lxml import html
-import sys
 import ez_epub
-import pickle
 from requests.compat import urljoin
 
 session = requests.session()
-ILLEAGAL_FILENAME_CHARACTERS = str.maketrans(r'.<>:"/\|?*^', '-----------')
+ILLEGAL_FILENAME_CHARACTERS = str.maketrans(r'.<>:"/\|?*^', '-----------')
 
 session.headers[
     'User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3021.0 Safari/537.36'
@@ -20,13 +17,13 @@ session.headers['content-type'] = "application/x-www-form-urlencoded"
 session.headers['accept-encoding'] = "gzip, deflate, br"
 session.headers['authority'] = "www.blinkist.com"
 
-book_urls = []
-username = "YOUR USERNAME"
-password = "YOUR PASSWORD"
+book_titles = []
+username = "?"
+password = "?"
 
 
 def get_csrf_token():
-    url_start = "https://www.blinkist.com/en/books.html"
+    url_start = "https://www.blinkist.com/en/nc/books.html"
     response = session.get(url=url_start)
     html_content = response.content.decode("utf-8")
     tree = html.fromstring(html=html_content)
@@ -34,13 +31,13 @@ def get_csrf_token():
     return csrf_token
 
 
-def login(username: str, password: str):
+def login(user: str, pwd: str):
     csrf_token = get_csrf_token()
 
-    url_login = "https://www.blinkist.com/en/login/"
+    url_login = "https://www.blinkist.com/en/nc/login/"
     session.post(url=url_login, data={
-        "login[email]": username,
-        "login[password]": password,
+        "login[email]": user,
+        "login[password]": pwd,
         "login[facebook_access_token]": None,
         "utf8": unescape("%E2%9C%93"),
         "authenticity_token": csrf_token
@@ -48,25 +45,31 @@ def login(username: str, password: str):
 
 
 def analytic_info_html(book: ez_epub.Book, url):
+    print('Getting info of ' + url)
+
     response = session.get(url=url)
     tree = html.fromstring(response.content)
-    title = tree.xpath("//div[@class='book__header__name']/text()")[0].strip()
+    title = tree.xpath("//h1[@class='book__header__title']/text()")[0].strip()
+    subtitle = tree.xpath("//h2[@class='book__header__subtitle']/text()")[0].strip()
     tree_author = [author.strip() for author in tree.xpath("//div[@class='book__header__author']/text()")]
-    tree_info__category = "; ".join(tree.xpath("//div[@class='book__header__info__category']//a/text()"))
+    # tree_info__category = "; ".join(tree.xpath("//div[@class='book__header__info__category']//a/text()"))
     tree_image = tree.xpath("//div[@class='book__header__image']/img/@src")[0]
-    tree_synopsis = tree.xpath("//div[@class='book__synopsis__body']")[0]
-    tree_book_faq = tree.xpath("//div[@class='book__faq']")[0]
+    tree_synopsis = tree.xpath("//div[@ref='synopsis']")[0]
+    # tree_book_faq = tree.xpath("//div[@class='book__faq']")[0]
     html_synopsis = html.tostring(tree_synopsis)
     book.impl.description = HTML(html_synopsis, encoding='utf-8')
-    book.impl.addMeta('publisher', 'blinkist')
-    book.impl.addMeta('tag', tree_info__category)
-    book.impl.addMeta('faq', tree_book_faq)
+    book.impl.addMeta('publisher', 'Blinkist')
+    # book.impl.addMeta('tag', tree_info__category)
+    # book.impl.addMeta('faq', tree_book_faq)
+    book.impl.addMeta('subtitle', subtitle)
 
-    section = ez_epub.Section()
-    faq_html = html.tostring(tree_book_faq)
-    section.html = HTML(faq_html, encoding="utf-8")
-    section.title = "Frequently Asked Questions"
-    book.sections.append(section)
+    # section = ez_epub.Section()
+    # faq_html = html.tostring(tree_book_faq)
+    # section.html = HTML(faq_html, encoding="utf-8")
+    # section.title = "Frequently Asked Questions"
+    # book.sections.append(section)
+
+    # TODO: who is it for? about the author
 
     story_cover = io.BytesIO(session.get(tree_image).content)
     book.impl.addCover(fileobj=story_cover)
@@ -78,6 +81,8 @@ def analytic_info_html(book: ez_epub.Book, url):
 
 
 def analytic_content_html(book: ez_epub.Book, url: str):
+    print('Getting content of ' + url)
+
     response = session.get(url=url)
     tree = html.fromstring(response.content)
     tree_main = tree.xpath("//main[@role='main']")[0]
@@ -134,22 +139,25 @@ def extract_book_urls(html_content):
 
 
 def main():
-    login(username=username, password=password)
+    login(user=username, pwd=password)
 
-    for index, book_url in enumerate(book_urls):
-        title = extract_title_from_book_url(book_url)
-        print("{}/{} - {}".format(index + 1, len(book_urls), title))
+    for index, title in enumerate(book_titles):
+        # title = extract_title_from_book_url(book_url)
+        print("{}/{} - {}".format(index + 1, len(book_titles), title))
         book = ez_epub.Book()
         book.sections = []
-        book = analytic_info_html(book=book, url="https://www.blinkist.com/en/books/{title}.html".format(title=title))
-        book = analytic_content_html(book=book, url="https://www.blinkist.com/en/reader/{title}/".format(title=title))
+        book = analytic_info_html(book=book, url="https://www.blinkist.com/en/books/{title}/".format(title=title))
+
+        book = analytic_content_html(book=book, url="https://www.blinkist.com/en/nc/reader/{title}/".format(title=title))
         print('Saving epub')
-        book.make('./{title}'.format(title=book.title.translate(ILLEAGAL_FILENAME_CHARACTERS)))
+        book.make('./{title}'.format(title=book.title.translate(ILLEGAL_FILENAME_CHARACTERS)))
 
 
 if __name__ == '__main__':
-    if sys.argv[1:]:
-        book_urls = sys.argv[1:]
-    else:
-        book_urls = sys.stdin
+    book_titles = ['15-secrets-successful-people-know-about-time-management-en-kevin-kruse']
+
+    # if sys.argv[1:]:
+    #     book_titles = sys.argv[1:]
+    # else:
+    #     book_titles = sys.stdin
     main()

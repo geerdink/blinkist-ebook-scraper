@@ -1,5 +1,4 @@
-epubbuilder==0.1.0.3
-Genshi==0.7
+Genshi==0.7.1
 lxml==3.7.3
 python-dateutil==2.6.0
 requests==2.13.0
