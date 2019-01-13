@@ -4,7 +4,6 @@ import requests
 from genshi.input import HTML
 from lxml import html
 import ez_epub
-from requests.compat import urljoin
 
 session = requests.session()
 ILLEGAL_FILENAME_CHARACTERS = str.maketrans(r'.<>:"/\|?*^', '-----------')
@@ -17,7 +16,7 @@ session.headers['content-type'] = "application/x-www-form-urlencoded"
 session.headers['accept-encoding'] = "gzip, deflate, br"
 session.headers['authority'] = "www.blinkist.com"
 
-book_titles = []
+categories = ['entrepreneurship-and-small-business-en']
 username = "?"
 password = "?"
 
@@ -44,14 +43,30 @@ def login(user: str, pwd: str):
     }, allow_redirects=True)
 
 
-def analytic_info_html(book: ez_epub.Book, url):
+def get_books_for_category(url: str):
+    print('Getting all books of category ' + url)
+
+    response = session.get(url=url)
+    tree = html.fromstring(response.content)
+
+    book_urls = tree.xpath("//a[@class='letter-book-list__item']/@href")
+
+    # example url: https://www.blinkist.com/en/books/21-days-to-a-big-idea-en/
+    titles = list(map(lambda u: u[34:-1], book_urls))
+
+    return titles
+
+
+def analytic_info_html(category: str, book: ez_epub.Book, url):
     print('Getting info of ' + url)
 
     response = session.get(url=url)
     tree = html.fromstring(response.content)
+
     title = tree.xpath("//h1[@class='book__header__title']/text()")[0].strip()
     subtitle = tree.xpath("//h2[@class='book__header__subtitle']/text()")[0].strip()
-    tree_author = [author.strip() for author in tree.xpath("//div[@class='book__header__author']/text()")]
+    tree_author = [author.strip().replace('By ', '')
+                   for author in tree.xpath("//div[@class='book__header__author']/text()")]
     # tree_info__category = "; ".join(tree.xpath("//div[@class='book__header__info__category']//a/text()"))
     tree_image = tree.xpath("//div[@class='book__header__image']/img/@src")[0]
     tree_synopsis = tree.xpath("//div[@ref='synopsis']")[0]
@@ -59,17 +74,10 @@ def analytic_info_html(book: ez_epub.Book, url):
     html_synopsis = html.tostring(tree_synopsis)
     book.impl.description = HTML(html_synopsis, encoding='utf-8')
     book.impl.addMeta('publisher', 'Blinkist')
-    # book.impl.addMeta('tag', tree_info__category)
-    # book.impl.addMeta('faq', tree_book_faq)
+    book.impl.addMeta('tag', category)
     book.impl.addMeta('subtitle', subtitle)
 
-    # section = ez_epub.Section()
-    # faq_html = html.tostring(tree_book_faq)
-    # section.html = HTML(faq_html, encoding="utf-8")
-    # section.title = "Frequently Asked Questions"
-    # book.sections.append(section)
-
-    # TODO: who is it for? about the author
+    # TODO: who is it for?, about the author
 
     story_cover = io.BytesIO(session.get(tree_image).content)
     book.impl.addCover(fileobj=story_cover)
@@ -106,58 +114,21 @@ def remove_tag(tree, xpath):
     return tree
 
 
-def extract_title_from_book_url(book_url: str):
-    title = book_url.split("/")[-1].split(".")[0]
-    return title
-
-
-def get_recently_added_blinks(url: str):
-    local_book_urls = []
-    next_url = url
-    while next_url is not None:
-        print(next_url)
-        json_content = requests.get(url=urljoin(url, next_url)).json()
-        status = json_content.get("status", None)
-        if status == "ok":
-            html_content = json_content.get("template", None)
-            if html_content:
-                next_book_urls = extract_book_urls(html_content=html_content)
-                local_book_urls += next_book_urls
-            next_url = json_content.get("next_url", None)
-        else:
-            break
-    return local_book_urls
-
-
-def extract_book_urls(html_content):
-    tree = html.fromstring(html_content)
-    tree_book_urls = tree.xpath("//a[@class='blinkV2__link']/@data-product-url")
-    local_book_urls = []
-    for book_url in tree_book_urls:
-        local_book_urls.append(book_url)
-    return local_book_urls
-
-
 def main():
     login(user=username, pwd=password)
 
-    for index, title in enumerate(book_titles):
-        # title = extract_title_from_book_url(book_url)
-        print("{}/{} - {}".format(index + 1, len(book_titles), title))
-        book = ez_epub.Book()
-        book.sections = []
-        book = analytic_info_html(book=book, url="https://www.blinkist.com/en/books/{title}/".format(title=title))
+    for cat in categories:
+        book_titles = get_books_for_category(url="https://www.blinkist.com/en/nc/categories/{cat}/books/".format(cat=cat))
 
-        book = analytic_content_html(book=book, url="https://www.blinkist.com/en/nc/reader/{title}/".format(title=title))
-        print('Saving epub')
-        book.make('./{title}'.format(title=book.title.translate(ILLEGAL_FILENAME_CHARACTERS)))
+        for index, title in enumerate(book_titles):
+            print("{}/{} - {}".format(index + 1, len(book_titles), title))
+            book = ez_epub.Book()
+            book.sections = []
+            book = analytic_info_html(category=cat, book=book, url="https://www.blinkist.com/en/books/{title}/".format(title=title))
+            book = analytic_content_html(book=book, url="https://www.blinkist.com/en/nc/reader/{title}/".format(title=title))
+            print('Saving epub file')
+            book.make('./{title}'.format(title=book.title.translate(ILLEGAL_FILENAME_CHARACTERS)))
 
 
 if __name__ == '__main__':
-    book_titles = ['15-secrets-successful-people-know-about-time-management-en-kevin-kruse']
-
-    # if sys.argv[1:]:
-    #     book_titles = sys.argv[1:]
-    # else:
-    #     book_titles = sys.stdin
     main()
