@@ -16,9 +16,9 @@ session.headers['content-type'] = "application/x-www-form-urlencoded"
 session.headers['accept-encoding'] = "gzip, deflate, br"
 session.headers['authority'] = "www.blinkist.com"
 
-categories = ['entrepreneurship-and-small-business-en']
-username = "?"
-password = "?"
+categories = ['science-en', 'parenting-en', 'career-and-success-en', 'management-and-leadership-en', 'biography-and-history-en', 'motivation-and-inspiration-en', 'technology-and-the-future-en']
+username = ""
+password = ""
 
 
 def get_csrf_token():
@@ -127,7 +127,7 @@ def main():
             book = analytic_info_html(category=cat, book=book, url="https://www.blinkist.com/en/books/{title}/".format(title=title))
             book = analytic_content_html(book=book, url="https://www.blinkist.com/en/nc/reader/{title}/".format(title=title))
             print('Saving epub file')
-            book.make('./{title}'.format(title=book.title.translate(ILLEGAL_FILENAME_CHARACTERS)))
+            book.make('./{cat}/{title}'.format(cat=cat, title=book.title.translate(ILLEGAL_FILENAME_CHARACTERS)))
 
 
 if __name__ == '__main__':
