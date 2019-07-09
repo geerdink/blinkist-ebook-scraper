@@ -16,7 +16,7 @@ session.headers['content-type'] = "application/x-www-form-urlencoded"
 session.headers['accept-encoding'] = "gzip, deflate, br"
 session.headers['authority'] = "www.blinkist.com"
 
-categories = ['science-en', 'parenting-en', 'career-and-success-en', 'management-and-leadership-en', 'biography-and-history-en', 'motivation-and-inspiration-en', 'technology-and-the-future-en']
+categories = ['entrepreneurship-and-small-business-en', 'science-en', 'parenting-en', 'career-and-success-en', 'management-and-leadership-en', 'biography-and-history-en', 'motivation-and-inspiration-en', 'technology-and-the-future-en']
 username = ""
 password = ""
 
@@ -51,8 +51,8 @@ def get_books_for_category(url: str):
 
     book_urls = tree.xpath("//a[@class='letter-book-list__item']/@href")
 
-    # example url: https://www.blinkist.com/en/books/21-days-to-a-big-idea-en/
-    titles = list(map(lambda u: u[34:-1], book_urls))
+    # example url:  https://www.blinkist.com/en/nc/reader/the-grand-design-en
+    titles = list(map(lambda u: u[34:], book_urls))
 
     return titles
 
@@ -118,13 +118,14 @@ def main():
     login(user=username, pwd=password)
 
     for cat in categories:
+        # https://www.blinkist.com/en/nc/categories/entrepreneurship-and-small-business-en
         book_titles = get_books_for_category(url="https://www.blinkist.com/en/nc/categories/{cat}/books/".format(cat=cat))
 
         for index, title in enumerate(book_titles):
             print("{}/{} - {}".format(index + 1, len(book_titles), title))
             book = ez_epub.Book()
             book.sections = []
-            book = analytic_info_html(category=cat, book=book, url="https://www.blinkist.com/en/books/{title}/".format(title=title))
+            book = analytic_info_html(category=cat, book=book, url="https://www.blinkist.com/books/{title}/".format(title=title))
             book = analytic_content_html(book=book, url="https://www.blinkist.com/en/nc/reader/{title}/".format(title=title))
             print('Saving epub file')
             book.make('./{cat}/{title}'.format(cat=cat, title=book.title.translate(ILLEGAL_FILENAME_CHARACTERS)))
