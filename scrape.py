@@ -17,12 +17,17 @@ session.headers['content-type'] = "application/x-www-form-urlencoded"
 session.headers['accept-encoding'] = "gzip, deflate, br"
 session.headers['authority'] = "www.blinkist.com"
 
-categories = [  # 'entrepreneurship-and-small-business-en',
-              'science-en']
-    # , 'economics-en', 'corporate-culture-en', 'money-and-investments-en', 'relationships-and-parenting-en', 'parenting-en', 'career-and-success-en',
-    #           'philosophy-en', 'politics-and-society-en', 'health-and-fitness-en', 'biography-and-history-en', 'management-and-leadership-en', 'psychology-en', 'technology-and-the-future-en', 'creativity-en',
-    #           'marketing-and-sales-en', 'personal-growh-and-self-improvement-en', 'communication-and-social-skills-en','motivation-and-inspiration-en', 'productivity-and-time-management-en',
-    #           'mindfulness-and-happiness-en', 'biography-and-memoir-en', 'education-en']
+categories = [
+    'entrepreneurship-and-small-business-en',
+              'science-en',
+      'economics-en', 'corporate-culture-en', 'money-and-investments-en', 'relationships-and-parenting-en',
+                'parenting-en', 'career-and-success-en',
+               'philosophy-en', 'politics-and-society-en', 'health-and-fitness-en', 'biography-and-history-en',
+                'management-and-leadership-en', 'psychology-en',
+              'technology-and-the-future-en', 'creativity-en',
+               'marketing-and-sales-en', 'personal-growh-and-self-improvement-en', 'communication-and-social-skills-en',
+                'motivation-and-inspiration-en', 'productivity-and-time-management-en',
+              'mindfulness-and-happiness-en', 'biography-and-memoir-en', 'education-en']
 username = ""
 password = ""
 
@@ -133,7 +138,7 @@ def main():
             # check if we already have the epub file
             filename = './{cat}/{title}'.format(cat=cat, title=title) # title=book.title.translate(ILLEGAL_FILENAME_CHARACTERS))
 
-            if os.path.isfile(filename):
+            if os.path.isfile(filename + '.epub'):
                 print('File already exists')
             else:
                 book = ez_epub.Book()
