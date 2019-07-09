@@ -1,4 +1,5 @@
 import io
+import os
 from html import unescape
 import requests
 from genshi.input import HTML
@@ -16,10 +17,12 @@ session.headers['content-type'] = "application/x-www-form-urlencoded"
 session.headers['accept-encoding'] = "gzip, deflate, br"
 session.headers['authority'] = "www.blinkist.com"
 
-categories = ['entrepreneurship-and-small-business-en', 'science-en', 'economics-en', 'corporate-culture-en', 'money-and-investments-en', 'relationships-and-parenting-en', 'parenting-en', 'career-and-success-en',
-              'philosophy-en', 'politics-and-society-en', 'health-and-fitness-en', 'biography-and-history-en', 'management-and-leadership-en', 'psychology-en', 'technology-and-the-future-en', 'creativity-en',
-              'marketing-and-sales-en', 'personal-growh-and-self-improvement-en', 'communication-and-social-skills-en','motivation-and-inspiration-en', 'productivity-and-time-management-en',
-              'mindfulness-and-happiness-en', 'biography-and-memoir-en', 'education-en']
+categories = [  # 'entrepreneurship-and-small-business-en',
+              'science-en']
+    # , 'economics-en', 'corporate-culture-en', 'money-and-investments-en', 'relationships-and-parenting-en', 'parenting-en', 'career-and-success-en',
+    #           'philosophy-en', 'politics-and-society-en', 'health-and-fitness-en', 'biography-and-history-en', 'management-and-leadership-en', 'psychology-en', 'technology-and-the-future-en', 'creativity-en',
+    #           'marketing-and-sales-en', 'personal-growh-and-self-improvement-en', 'communication-and-social-skills-en','motivation-and-inspiration-en', 'productivity-and-time-management-en',
+    #           'mindfulness-and-happiness-en', 'biography-and-memoir-en', 'education-en']
 username = ""
 password = ""
 
@@ -126,12 +129,19 @@ def main():
 
         for index, title in enumerate(book_titles):
             print("{}/{} - {}".format(index + 1, len(book_titles), title))
-            book = ez_epub.Book()
-            book.sections = []
-            book = analytic_info_html(category=cat, book=book, url="https://www.blinkist.com/books/{title}/".format(title=title))
-            book = analytic_content_html(book=book, url="https://www.blinkist.com/en/nc/reader/{title}/".format(title=title))
-            print('Saving epub file')
-            book.make('./{cat}/{title}'.format(cat=cat, title=book.title.translate(ILLEGAL_FILENAME_CHARACTERS)))
+
+            # check if we already have the epub file
+            filename = './{cat}/{title}'.format(cat=cat, title=title) # title=book.title.translate(ILLEGAL_FILENAME_CHARACTERS))
+
+            if os.path.isfile(filename):
+                print('File already exists')
+            else:
+                book = ez_epub.Book()
+                book.sections = []
+                book = analytic_info_html(category=cat, book=book, url="https://www.blinkist.com/books/{title}/".format(title=title))
+                book = analytic_content_html(book=book, url="https://www.blinkist.com/en/nc/reader/{title}/".format(title=title))
+                book.make(filename)
+                print('Created epub file: ' + filename)
 
 
 if __name__ == '__main__':
